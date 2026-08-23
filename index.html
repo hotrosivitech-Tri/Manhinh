@@ -54,7 +54,10 @@
     </div>
     
     <div id="setupGhDiv" style="background: #e8f8f5; border: 1px solid #a3e4d7; padding: 12px; border-radius: 6px; margin-bottom: 15px; display:none;">
-        <b>⚙️ Cấu hình GitHub Sync:</b><br>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <b>⚙️ Cấu hình GitHub Sync:</b>
+            <button class="btn small red" onclick="document.getElementById('setupGhDiv').style.display='none'" style="padding: 2px 6px;">Đóng bớt</button>
+        </div>
         <div style="display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap;">
             <input type="text" id="ghRepo" placeholder="Repo (VD: hotrosivitech-Tri/Manhinh)" style="flex:1; margin:0; padding:8px;">
             <input type="password" id="ghToken" placeholder="GitHub Token (PAT)" style="flex:1; margin:0; padding:8px;">
@@ -135,7 +138,6 @@
 
 <script>
     let globalProducts = [];
-    // Kiểm tra trạng thái đăng nhập đã lưu trước đó trên trình duyệt hay chưa
     let isAdmin = localStorage.getItem('is_admin_logged_in') === 'true';
     
     const ADMIN_USERNAME = "admin";
@@ -147,7 +149,6 @@
     let selectedRowForTeach = null;
 
     window.addEventListener('DOMContentLoaded', async () => {
-        // Cập nhật giao diện ngay lập tức nếu đã đăng nhập từ trước
         if (isAdmin) {
             applyAdminUIMode();
         }
@@ -159,9 +160,16 @@
         document.getElementById('userRoleBadge').style.color = "#d35400";
         document.getElementById('loginBtn').style.display = 'none';
         document.getElementById('logoutBtn').style.display = 'inline-block';
-        document.getElementById('setupGhDiv').style.display = 'block';
-        document.getElementById('ghRepo').value = ghRepo;
-        document.getElementById('ghToken').value = ghToken;
+        
+        // CHỈ HIỆN bảng cấu hình GitHub khi đăng nhập NẾU CHƯA CÓ Token, 
+        // còn nếu đã lưu rồi thì ẩn đi cho gọn giao diện.
+        if (!ghToken || !ghRepo) {
+            document.getElementById('setupGhDiv').style.display = 'block';
+            document.getElementById('ghRepo').value = ghRepo;
+            document.getElementById('ghToken').value = ghToken;
+        } else {
+            document.getElementById('setupGhDiv').style.display = 'none';
+        }
     }
 
     async function loadExcelAndAliases() {
@@ -308,7 +316,7 @@
         let p = document.getElementById('adminPass').value.trim();
         if (u === ADMIN_USERNAME && p === ADMIN_PASSWORD) {
             isAdmin = true;
-            localStorage.setItem('is_admin_logged_in', 'true'); // Ghi nhớ trạng thái đăng nhập
+            localStorage.setItem('is_admin_logged_in', 'true');
             applyAdminUIMode();
             document.getElementById('loginModal').classList.remove('open');
             renderTable(globalProducts, document.getElementById('searchInput').value);
@@ -317,7 +325,7 @@
 
     document.getElementById('logoutBtn').addEventListener('click', function() {
         isAdmin = false;
-        localStorage.removeItem('is_admin_logged_in'); // Xóa trạng thái ghi nhớ khi đăng xuất
+        localStorage.removeItem('is_admin_logged_in');
         document.getElementById('userRoleBadge').innerHTML = "👤 Khách";
         document.getElementById('userRoleBadge').style.color = "#27ae60";
         document.getElementById('loginBtn').style.display = 'inline-block';
