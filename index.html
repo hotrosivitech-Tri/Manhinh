@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tra Cứu Kho Linh Kiện - Đọc File Excel Gốc</title>
-    <!-- Thư viện đọc file Excel SheetJS -->
+    <title>Tra Cứu Kho Linh Kiện - File Excel Gốc</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Thư viện OCR Tesseract cho camera -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 15px; color: #333; }
@@ -27,12 +25,10 @@
         th { background-color: #2c3e50; color: white; }
         tr:nth-child(even) { background-color: #f9f9f9; }
         .badge { background: #e1f5fe; color: #0277bd; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
-        
         .alias-tag { display: inline-flex; align-items: center; background: #fff3e0; color: #d35400; border: 1px solid #f39c12; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin: 2px; font-weight: bold; }
         .alias-tag .remove-tag { margin-left: 6px; cursor: pointer; color: #c0392b; font-weight: bold; font-size: 14px; }
         .aliases-container { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
         .stats { font-size: 13px; color: #666; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; padding: 15px; z-index: 1000; }
         .modal.open { display: flex; }
         .modalbox { background: white; border-radius: 12px; max-width: 600px; width: 100%; padding: 20px; text-align: left; }
@@ -46,12 +42,10 @@
 <body>
 
 <div class="container">
-    <h2>📦 Tra Cứu Kho Linh Kiện (Đọc Trực Tiếp File Excel Gốc)</h2>
+    <h2>📦 Tra Cứu Kho Linh Kiện (Đọc Trực Tiếp File Excel)</h2>
 
     <div class="top-bar">
-        <div>
-            Trạng thái: <span id="userRoleBadge" style="font-weight: bold; color: #27ae60;">👤 Khách (Tra cứu & quét)</span>
-        </div>
+        <div>Trạng thái: <span id="userRoleBadge" style="font-weight: bold; color: #27ae60;">👤 Khách (Tra cứu & quét)</span></div>
         <div>
             <button class="btn" id="loginBtn">🔑 Đăng Nhập Quản Trị</button>
             <button class="btn red" id="logoutBtn" style="display:none;">Đăng Xuất</button>
@@ -62,7 +56,7 @@
         <b>⚙️ Cấu hình GitHub Sync (Lưu từ khóa đã dạy):</b><br>
         <div style="display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap;">
             <input type="text" id="ghRepo" placeholder="Repo (VD: hotrosivitech-Tri/Manhinh)" style="flex:1; margin:0; padding:8px;">
-            <input type="password" id="ghToken" placeholder="GitHub Personal Access Token (PAT)" style="flex:1; margin:0; padding:8px;">
+            <input type="password" id="ghToken" placeholder="GitHub Token (PAT)" style="flex:1; margin:0; padding:8px;">
             <button class="btn green" onclick="saveGhConfig()" style="padding: 8px 15px;">Lưu Cấu Hình</button>
         </div>
     </div>
@@ -74,7 +68,7 @@
     </div>
     
     <div class="stats">
-        <span id="statsInfo">Đang tìm và đọc file Excel gốc trên kho...</span>
+        <span id="statsInfo">Đang quét tìm file Excel trên kho...</span>
         <div><span id="syncStatus" style="font-weight: bold; color: #27ae60;"></span></div>
     </div>
 
@@ -82,7 +76,7 @@
         <thead>
             <tr>
                 <th style="width: 8%;">STT</th>
-                <th style="width: 25%;">Mã / Thông Tin Gốc</th>
+                <th style="width: 25%;">Mã Sản Phẩm</th>
                 <th>Tên Sản Phẩm & Dấu Hiệu Nhận Diện (Aliases)</th>
             </tr>
         </thead>
@@ -96,14 +90,9 @@
 <div class="modal" id="teachModal">
     <div class="modalbox">
         <h3 style="margin-top:0; color: #c0392b;">🔗 Dạy Dấu Hiệu Mới</h3>
-        <p style="font-size: 13px; color: #555; margin-bottom: 5px;">Từ khóa mới cần ghi nhớ:</p>
         <input type="text" id="editableMissingKeyword" style="font-weight: bold; color: #d35400; font-size: 15px;">
-        
-        <p style="font-size: 13px; color: #555; margin-top: 10px; margin-bottom: 5px;">Gõ tìm nhanh sản phẩm gốc để trỏ từ khóa vào:</p>
-        <input type="text" id="filterProductModalInput" placeholder="Gõ tên hoặc mã sản phẩm..." oninput="filterModalProductList()">
-        
+        <input type="text" id="filterProductModalInput" placeholder="Gõ tìm nhanh sản phẩm gốc..." oninput="filterModalProductList()">
         <div id="modalProductList" style="max-height: 220px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px; background: #fafafa;"></div>
-        
         <div style="text-align: right; margin-top: 15px;">
             <button class="btn" onclick="closeTeachModal()" style="background: #95a5a6;">Hủy bỏ</button>
         </div>
@@ -114,10 +103,8 @@
 <div class="modal" id="loginModal">
     <div class="modalbox" style="max-width: 400px;">
         <h3>Đăng Nhập Quản Trị Kho</h3>
-        <label>Tài khoản:</label>
-        <input type="text" id="adminUser" placeholder="Nhập tài khoản...">
-        <label>Mật khẩu:</label>
-        <input type="password" id="adminPass" placeholder="Nhập mật khẩu...">
+        <input type="text" id="adminUser" placeholder="Tài khoản...">
+        <input type="password" id="adminPass" placeholder="Mật khẩu...">
         <div style="text-align: right; margin-top: 15px;">
             <button class="btn" onclick="document.getElementById('loginModal').classList.remove('open')" style="background: #95a5a6;">Hủy</button>
             <button class="btn green" id="submitLoginBtn">Đăng Nhập</button>
@@ -125,7 +112,7 @@
     </div>
 </div>
 
-<!-- Modal Camera OCR -->
+<!-- Modal Camera -->
 <div class="modal" id="camModal">
     <div class="modalbox" style="text-align: center;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -134,7 +121,7 @@
         </div>
         <video id="videoFeed" autoplay playsinline muted></video>
         <canvas id="canvasSnap" style="display: none;"></canvas>
-        <div class="ocr-status" id="ocrStatus">Đang yêu cầu quyền camera...</div>
+        <div class="ocr-status" id="ocrStatus">Đang xin quyền camera...</div>
         <button class="btn green" id="captureBtn" style="width: 100%; padding: 12px; margin-top: 5px;">📸 Chụp & Đọc Dấu Hiệu Ngay</button>
     </div>
 </div>
@@ -143,10 +130,8 @@
     let globalProducts = [];
     let isAdmin = false;
     let mediaStream = null;
-
     const ADMIN_USERNAME = "admin";
     const ADMIN_PASSWORD = "Khongnho@1";
-
     let ghRepo = localStorage.getItem('gh_repo') || 'hotrosivitech-Tri/Manhinh';
     let ghToken = localStorage.getItem('gh_token') || '';
     const ALIAS_FILE_PATH = "aliases.json";
@@ -156,39 +141,32 @@
     });
 
     async function loadExcelAndAliases() {
-        document.getElementById('statsInfo').innerText = "Đang tìm file Excel gốc trên kho...";
+        document.getElementById('statsInfo').innerText = "Đang tìm file Excel trên kho GitHub...";
         try {
-            let repoName = ghRepo || "hotrosivitech-Tri/Manhinh";
-            let contentsUrl = `https://api.github.com/repos/${repoName}/contents`;
-            let res = await fetch(contentsUrl);
+            let res = await fetch(`https://api.github.com/repos/${ghRepo}/contents`);
             if (!res.ok) throw new Error("Không kết nối được kho GitHub.");
             
             let files = await res.json();
+            // Lọc tìm bất kỳ file excel nào (.xlsx hoặc .xls)
+            let excelFile = files.find(f => f.name.endsWith('.xlsx') || f.name.endsWith('.xls'));
             
-            // Tìm file excel (không lấy file json mẫu cũ)
-            let excelFile = files.find(f => (f.name.endsWith('.xlsx') || f.name.endsWith('.xls')) && f.name !== 'data.json');
             if (!excelFile) {
-                document.getElementById('statsInfo').innerText = "❌ Không tìm thấy file Excel gốc nào trên kho! Vui lòng upload file Excel lên.";
+                document.getElementById('statsInfo').innerText = "❌ Không tìm thấy file Excel nào trên kho! Hãy upload file Excel lên.";
                 return;
             }
 
-            document.getElementById('statsInfo').innerText = `Đang đọc file gốc: ${excelFile.name}...`;
+            document.getElementById('statsInfo').innerText = `Đang đọc file: ${excelFile.name}...`;
 
             let excelRes = await fetch(excelFile.download_url);
             let arrayBuffer = await excelRes.arrayBuffer();
-            
             let workbook = XLSX.read(arrayBuffer, { type: 'array' });
-            let firstSheetName = workbook.SheetNames[0];
-            let worksheet = workbook.Sheets[firstSheetName];
-            
+            let worksheet = workbook.Sheets[workbook.SheetNames[0]];
             let excelRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
             
             let savedAliases = {};
             try {
                 let aliasRes = await fetch(ALIAS_FILE_PATH + "?t=" + new Date().getTime());
-                if (aliasRes.ok) {
-                    savedAliases = await aliasRes.json();
-                }
+                if (aliasRes.ok) savedAliases = await aliasRes.json();
             } catch(e) {}
 
             parseExcelData(excelRows, savedAliases);
@@ -207,10 +185,8 @@
         for (let i = 1; i < rows.length; i++) {
             let r = rows[i];
             if (!r || r.length === 0) continue;
-            
             let code = r[0] ? String(r[0]).trim() : '';
             let name = r[1] ? String(r[1]).trim() : (code ? code : '');
-            
             if (!code && !name) continue;
 
             let uniqueKey = code || name;
@@ -230,15 +206,11 @@
 
     async function syncAliasesToGitHub() {
         if (!ghRepo || !ghToken) return;
-
         document.getElementById('syncStatus').innerText = "⏳ Đang lưu từ khóa...";
-        
         let aliasPayload = {};
         globalProducts.forEach(p => {
             let key = p.code || p.name;
-            if (p.aliases.length > 0) {
-                aliasPayload[key] = p.aliases;
-            }
+            if (p.aliases.length > 0) aliasPayload[key] = p.aliases;
         });
 
         let contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(aliasPayload, null, 2))));
@@ -247,8 +219,7 @@
         try {
             let getRes = await fetch(apiUrl, { headers: { "Authorization": `token ${ghToken}` } });
             let sha = getRes.ok ? (await getRes.json()).sha : "";
-
-            let putBody = { message: "Auto-update learned aliases", content: contentEncoded };
+            let putBody = { message: "Auto-update aliases", content: contentEncoded };
             if (sha) putBody.sha = sha;
 
             let putRes = await fetch(apiUrl, {
@@ -258,12 +229,10 @@
             });
 
             if (putRes.ok) {
-                document.getElementById('syncStatus').innerText = "✅ Đã lưu từ khóa lên mây!";
+                document.getElementById('syncStatus').innerText = "✅ Đã lưu từ khóa!";
                 setTimeout(() => { document.getElementById('syncStatus').innerText = ""; }, 2500);
             }
-        } catch (err) {
-            console.log("Lỗi sync alias:", err);
-        }
+        } catch (err) { console.log(err); }
     }
 
     function saveGhConfig() {
@@ -271,14 +240,12 @@
         ghToken = document.getElementById('ghToken').value.trim();
         localStorage.setItem('gh_repo', ghRepo);
         localStorage.setItem('gh_token', ghToken);
-        alert("Đã lưu cấu hình GitHub!");
+        alert("Đã lưu cấu hình!");
         document.getElementById('setupGhDiv').style.display = 'none';
         loadExcelAndAliases();
     }
 
     document.getElementById('loginBtn').addEventListener('click', () => {
-        document.getElementById('adminUser').value = '';
-        document.getElementById('adminPass').value = '';
         document.getElementById('loginModal').classList.add('open');
     });
 
@@ -287,26 +254,22 @@
         let p = document.getElementById('adminPass').value.trim();
         if (u === ADMIN_USERNAME && p === ADMIN_PASSWORD) {
             isAdmin = true;
-            document.getElementById('userRoleBadge').innerHTML = "👑 Quản Trị Viên (Được dạy từ khóa & đồng bộ)";
+            document.getElementById('userRoleBadge').innerHTML = "👑 Quản Trị Viên";
             document.getElementById('userRoleBadge').style.color = "#d35400";
             document.getElementById('loginBtn').style.display = 'none';
             document.getElementById('logoutBtn').style.display = 'inline-block';
             document.getElementById('saveExcelBtn').style.display = 'inline-block';
             document.getElementById('setupGhDiv').style.display = 'block';
-            
             document.getElementById('ghRepo').value = ghRepo;
             document.getElementById('ghToken').value = ghToken;
-
             document.getElementById('loginModal').classList.remove('open');
             renderTable(globalProducts, document.getElementById('searchInput').value);
-        } else {
-            alert("Sai tài khoản hoặc mật khẩu!");
-        }
+        } else { alert("Sai tài khoản hoặc mật khẩu!"); }
     });
 
     document.getElementById('logoutBtn').addEventListener('click', function() {
         isAdmin = false;
-        document.getElementById('userRoleBadge').innerHTML = "👤 Khách (Tra cứu & quét)";
+        document.getElementById('userRoleBadge').innerHTML = "👤 Khách";
         document.getElementById('userRoleBadge').style.color = "#27ae60";
         document.getElementById('loginBtn').style.display = 'inline-block';
         document.getElementById('logoutBtn').style.display = 'none';
@@ -317,10 +280,7 @@
 
     document.getElementById('searchInput').addEventListener('input', function(e) {
         let keyword = e.target.value.toLowerCase().trim();
-        if (!keyword) {
-            renderTable(globalProducts, '');
-            return;
-        }
+        if (!keyword) { renderTable(globalProducts, ''); return; }
         let filtered = globalProducts.filter(p => p.searchKey.includes(keyword) || p.aliases.some(a => a.includes(keyword)));
         renderTable(filtered, keyword);
     });
@@ -328,31 +288,22 @@
     function renderTable(data, keyword) {
         let tbody = document.getElementById('tableBody');
         if (data.length === 0) {
-            let teachBtnHtml = (isAdmin && keyword) ? `<br><br><button class="btn purple" onclick="openTeachModal('${keyword.replace(/'/g, "\\'")}')">🔗 Dạy chuỗi "${keyword}" cho sản phẩm...</button>` : '';
-            tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #888; padding: 20px;">Không tìm thấy sản phẩm khớp.${teachBtnHtml}</td></tr>`;
+            let teachBtnHtml = (isAdmin && keyword) ? `<br><br><button class="btn purple" onclick="openTeachModal('${keyword.replace(/'/g, "\\'")}')">🔗 Dạy chuỗi "${keyword}"...</button>` : '';
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #888; padding: 20px;">Không tìm thấy sản phẩm.${teachBtnHtml}</td></tr>`;
             return;
         }
         let html = '';
         data.forEach((p, index) => {
             let badgeHtml = p.code ? `<span class="badge">${p.code}</span>` : `<span style="color:#aaa">-</span>`;
-            
             let aliasTagsHtml = '';
             if (p.aliases.length > 0) {
-                aliasTagsHtml = `<div class="aliases-container"><span>🏷️ Dấu hiệu đã học:</span>`;
+                aliasTagsHtml = `<div class="aliases-container"><span>🏷️ Dấu hiệu:</span>`;
                 p.aliases.forEach(a => {
-                    if (isAdmin) {
-                        aliasTagsHtml += `<span class="alias-tag">${a} <span class="remove-tag" title="Gỡ" onclick="removeAlias(${p.rowIndex}, '${a}')">&times;</span></span>`;
-                    } else {
-                        aliasTagsHtml += `<span class="alias-tag">${a}</span>`;
-                    }
+                    aliasTagsHtml += `<span class="alias-tag">${a} ${isAdmin ? '<span class="remove-tag" onclick="removeAlias('+p.rowIndex+', \''+a+'\')">&times;</span>' : ''}</span>`;
                 });
                 aliasTagsHtml += `</div>`;
             }
-
-            let nameCell = isAdmin 
-                ? `<div><span>${p.name}</span>` + aliasTagsHtml + `<button class="btn purple small" style="margin-top:6px;" onclick="openTeachModalForProduct(${p.rowIndex})">+ Dạy thêm dấu hiệu...</button></div>`
-                : `${p.name} ${aliasTagsHtml}`;
-
+            let nameCell = isAdmin ? `<div><span>${p.name}</span>` + aliasTagsHtml + `<button class="btn purple small" style="margin-top:6px;" onclick="openTeachModalForProduct(${p.rowIndex})">+ Dạy thêm</button></div>` : `${p.name} ${aliasTagsHtml}`;
             html += `<tr><td>${index + 1}</td><td>${badgeHtml}</td><td>${nameCell}</td></tr>`;
         });
         tbody.innerHTML = html;
@@ -368,7 +319,6 @@
     function openTeachModalForProduct(rowIndex) {
         let item = globalProducts.find(p => p.rowIndex === rowIndex);
         document.getElementById('editableMissingKeyword').value = item ? (item.code || item.name.substring(0, 15)) : '';
-        document.getElementById('filterProductModalInput').value = '';
         window.targetRowForDirectTeach = rowIndex;
         renderModalProductList('');
         document.getElementById('teachModal').classList.add('open');
@@ -380,37 +330,28 @@
     }
 
     function filterModalProductList() {
-        let query = document.getElementById('filterProductModalInput').value.toLowerCase().trim();
-        renderModalProductList(query);
+        renderModalProductList(document.getElementById('filterProductModalInput').value.toLowerCase().trim());
     }
 
     function renderModalProductList(query) {
         let listContainer = document.getElementById('modalProductList');
         listContainer.innerHTML = '';
-        let matched = globalProducts;
-        if (query) {
-            matched = globalProducts.filter(p => p.searchKey.includes(query));
-        }
+        let matched = query ? globalProducts.filter(p => p.searchKey.includes(query)) : globalProducts;
         matched.slice(0, 40).forEach(p => {
             let itemDiv = document.createElement('div');
             itemDiv.className = 'product-select-item';
-            itemDiv.innerHTML = `<span><b>${p.code ? '['+p.code+'] ' : ''}</b> ${p.name}</span> <button class="btn green small">Gán Vào Đây</button>`;
-            itemDiv.onclick = function() {
-                let targetIdx = window.targetRowForDirectTeach !== null && window.targetRowForDirectTeach !== undefined ? window.targetRowForDirectTeach : p.rowIndex;
-                assignAliasToProduct(targetIdx);
-            };
+            itemDiv.innerHTML = `<span><b>${p.code ? '['+p.code+'] ' : ''}</b> ${p.name}</span> <button class="btn green small">Gán</button>`;
+            itemDiv.onclick = () => assignAliasToProduct(window.targetRowForDirectTeach !== null ? window.targetRowForDirectTeach : p.rowIndex);
             listContainer.appendChild(itemDiv);
         });
     }
 
     function assignAliasToProduct(chosenRowIdx) {
-        let keywordToTeach = document.getElementById('editableMissingKeyword').value.trim();
+        let keywordToTeach = document.getElementById('editableMissingKeyword').value.trim().toLowerCase();
         if (!keywordToTeach) return;
-        let newAlias = keywordToTeach.toLowerCase();
-        
         let item = globalProducts.find(p => p.rowIndex === chosenRowIdx);
-        if (item && !item.aliases.includes(newAlias)) {
-            item.aliases.push(newAlias);
+        if (item && !item.aliases.includes(keywordToTeach)) {
+            item.aliases.push(keywordToTeach);
             item.aliasesRaw = item.aliases.join(', ');
         }
         closeTeachModal();
@@ -428,78 +369,51 @@
 
     document.getElementById('saveExcelBtn').addEventListener('click', function() {
         let rows = [["Mã sản phẩm", "Tên sản phẩm", "Dấu hiệu nhận diện"]];
-        globalProducts.forEach(p => {
-            rows.push([p.code, p.name, p.aliasesRaw || '']);
-        });
+        globalProducts.forEach(p => rows.push([p.code, p.name, p.aliasesRaw || '']));
         let ws = XLSX.utils.aoa_to_sheet(rows);
         let wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Kho");
         XLSX.writeFile(wb, "Danh_sach_ton_kho_tong_hop.xlsx");
     });
 
+    // Camera OCR
     document.getElementById('openCamBtn').addEventListener('click', async function() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            alert("Trình duyệt chặn quyền camera!");
-            return;
-        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert("Trình duyệt chặn camera!"); return; }
         document.getElementById('camModal').classList.add('open');
-        document.getElementById('ocrStatus').innerText = "Đang xin quyền bật camera...";
+        document.getElementById('ocrStatus').innerText = "Đang mở camera...";
         try {
             mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
             document.getElementById('videoFeed').srcObject = mediaStream;
-            document.getElementById('ocrStatus').innerText = "Đã bật camera. Hướng vào mã mờ và bấm chụp!";
-        } catch (err) {
-            document.getElementById('ocrStatus').innerText = "Lỗi mở camera: " + err.message;
-        }
+            document.getElementById('ocrStatus').innerText = "Hướng vào nhãn mác và bấm chụp!";
+        } catch (err) { document.getElementById('ocrStatus').innerText = "Lỗi camera: " + err.message; }
     });
 
     document.getElementById('closeCamBtn').addEventListener('click', closeCamera);
     function closeCamera() {
-        if (mediaStream) {
-            mediaStream.getTracks().forEach(track => track.stop());
-            mediaStream = null;
-        }
+        if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
         document.getElementById('camModal').classList.remove('open');
     }
 
     document.getElementById('captureBtn').addEventListener('click', async function() {
         let video = document.getElementById('videoFeed');
         if (!video.videoWidth) return;
-
         let canvas = document.getElementById('canvasSnap');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        let ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0);
-
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
         document.getElementById('ocrStatus').innerText = "Đang đọc ký tự (OCR)...";
-
         try {
-            let result = await Tesseract.recognize(canvas, 'eng', {
-                logger: m => {
-                    if (m.status === 'recognizing text') {
-                        document.getElementById('ocrStatus').innerText = `Đang đọc: ${Math.round(m.progress * 100)}%`;
-                    }
-                }
-            });
-
+            let result = await Tesseract.recognize(canvas, 'eng');
             let text = result.data.text.replace(/[^a-zA-Z0-9]/g, ' ').trim();
             document.getElementById('ocrStatus').innerText = `Kết quả: "${text}"`;
-
             if (text) {
                 document.getElementById('searchInput').value = text;
                 let keyword = text.toLowerCase();
                 let filtered = globalProducts.filter(p => p.searchKey.includes(keyword) || p.aliases.some(a => a.includes(keyword)));
                 renderTable(filtered, keyword);
                 setTimeout(closeCamera, 800);
-            } else {
-                document.getElementById('ocrStatus').innerText = "Không đọc rõ chữ, thử lại nhé!";
-            }
-        } catch (err) {
-            document.getElementById('ocrStatus').innerText = "Lỗi OCR: " + err.message;
-        }
+            } else { document.getElementById('ocrStatus').innerText = "Không đọc rõ chữ, thử lại!"; }
+        } catch (err) { document.getElementById('ocrStatus').innerText = "Lỗi OCR: " + err.message; }
     });
 </script>
-
 </body>
 </html>
