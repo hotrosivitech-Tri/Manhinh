@@ -135,7 +135,9 @@
 
 <script>
     let globalProducts = [];
-    let isAdmin = false;
+    // Kiểm tra trạng thái đăng nhập đã lưu trước đó trên trình duyệt hay chưa
+    let isAdmin = localStorage.getItem('is_admin_logged_in') === 'true';
+    
     const ADMIN_USERNAME = "admin";
     const ADMIN_PASSWORD = "Khongnho@1";
     let ghRepo = localStorage.getItem('gh_repo') || 'hotrosivitech-Tri/Manhinh';
@@ -145,8 +147,22 @@
     let selectedRowForTeach = null;
 
     window.addEventListener('DOMContentLoaded', async () => {
+        // Cập nhật giao diện ngay lập tức nếu đã đăng nhập từ trước
+        if (isAdmin) {
+            applyAdminUIMode();
+        }
         await loadExcelAndAliases();
     });
+
+    function applyAdminUIMode() {
+        document.getElementById('userRoleBadge').innerHTML = "👑 Quản Trị Viên";
+        document.getElementById('userRoleBadge').style.color = "#d35400";
+        document.getElementById('loginBtn').style.display = 'none';
+        document.getElementById('logoutBtn').style.display = 'inline-block';
+        document.getElementById('setupGhDiv').style.display = 'block';
+        document.getElementById('ghRepo').value = ghRepo;
+        document.getElementById('ghToken').value = ghToken;
+    }
 
     async function loadExcelAndAliases() {
         document.getElementById('statsInfo').innerText = "Đang tìm file Excel trên kho GitHub...";
@@ -292,13 +308,8 @@
         let p = document.getElementById('adminPass').value.trim();
         if (u === ADMIN_USERNAME && p === ADMIN_PASSWORD) {
             isAdmin = true;
-            document.getElementById('userRoleBadge').innerHTML = "👑 Quản Trị Viên";
-            document.getElementById('userRoleBadge').style.color = "#d35400";
-            document.getElementById('loginBtn').style.display = 'none';
-            document.getElementById('logoutBtn').style.display = 'inline-block';
-            document.getElementById('setupGhDiv').style.display = 'block';
-            document.getElementById('ghRepo').value = ghRepo;
-            document.getElementById('ghToken').value = ghToken;
+            localStorage.setItem('is_admin_logged_in', 'true'); // Ghi nhớ trạng thái đăng nhập
+            applyAdminUIMode();
             document.getElementById('loginModal').classList.remove('open');
             renderTable(globalProducts, document.getElementById('searchInput').value);
         } else { alert("Sai tài khoản hoặc mật khẩu!"); }
@@ -306,6 +317,7 @@
 
     document.getElementById('logoutBtn').addEventListener('click', function() {
         isAdmin = false;
+        localStorage.removeItem('is_admin_logged_in'); // Xóa trạng thái ghi nhớ khi đăng xuất
         document.getElementById('userRoleBadge').innerHTML = "👤 Khách";
         document.getElementById('userRoleBadge').style.color = "#27ae60";
         document.getElementById('loginBtn').style.display = 'inline-block';
@@ -345,7 +357,6 @@
         tbody.innerHTML = html;
     }
 
-    // Trường hợp 1: Bấm từ nút tìm kiếm không thấy -> Nhập alias tự do và chọn sản phẩm gốc gán vào
     function openTeachModalForMissing(keyword) {
         document.getElementById('modalTitle').innerText = "🔗 Dạy Dấu Hiệu Mới";
         document.getElementById('teachInputArea').style.display = 'block';
@@ -357,7 +368,6 @@
         document.getElementById('teachModal').classList.add('open');
     }
 
-    // Trường hợp 2: Bấm thẳng vào nút "+ Dạy thêm" của 1 sản phẩm có sẵn
     function openTeachModalForProduct(rowIndex) {
         let item = globalProducts.find(p => p.rowIndex === rowIndex);
         if (!item) return;
