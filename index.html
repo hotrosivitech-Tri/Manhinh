@@ -13,9 +13,9 @@
         .container { max-width: 1050px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         h2 { margin-top: 0; color: #2c3e50; text-align: center; }
         .top-bar { display: flex; justify-content: space-between; align-items: center; background: #e8f4fd; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
-        .search-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-        .search-box { flex: 1; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; }
-        .btn { background: #2980b9; color: white; border: none; padding: 10px 16px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .search-row { display: flex; gap: 8px; margin-bottom: 15px; align-items: center; }
+        .search-box { flex: 1; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; min-width: 0; }
+        .btn { background: #2980b9; color: white; border: none; padding: 10px 14px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
         .btn.green { background: #27ae60; }
         .btn.red { background: #c0392b; }
         .btn.purple { background: #8e44ad; }
@@ -43,7 +43,7 @@
 <body>
 
 <div class="container">
-    <h2>📦 Tra Cứu Kho Linh Kiện & Quét QR Code</h2>
+    <h2>📦 Tra Cứu Kho Linh Kiện</h2>
 
     <div class="top-bar">
         <div>Trạng thái: <span id="userRoleBadge" style="font-weight: bold; color: #27ae60;">👤 Khách (Tra cứu)</span></div>
@@ -63,9 +63,8 @@
     </div>
 
     <div class="search-row">
-        <button class="btn orange" onclick="openQrScannerModal()">📷 Quét QR Code</button>
-        <input type="text" id="searchInput" class="search-box" placeholder="Gõ tìm kiếm mã cáp, tên sản phẩm hoặc bấm Quét QR..." disabled />
-        <button class="btn green" id="saveExcelBtn" style="display:none;">💾 Tải Về Excel</button>
+        <button class="btn orange" onclick="openQrScannerModal()" title="Quét mã QR / Barcode">📷</button>
+        <input type="text" id="searchInput" class="search-box" placeholder="Gõ tìm mã cáp, tên sản phẩm..." disabled />
     </div>
     
     <div class="stats">
@@ -102,12 +101,21 @@
 <!-- Modal Dán Nhãn / Dạy Dấu Hiệu -->
 <div class="modal" id="teachModal">
     <div class="modalbox">
-        <h3 style="margin-top:0; color: #c0392b;">🔗 Dạy Dấu Hiệu Mới</h3>
-        <input type="text" id="editableMissingKeyword" style="font-weight: bold; color: #d35400; font-size: 15px;">
+        <h3 id="modalTitle" style="margin-top:0; color: #c0392b;">🔗 Dạy Dấu Hiệu Mới</h3>
+        <div id="teachInputArea">
+            <label style="font-size: 13px; color: #666; font-weight: bold;">Dấu hiệu / từ khóa nhận diện:</label>
+            <input type="text" id="editableMissingKeyword" placeholder="Nhập mã hoặc tên cần dạy..." style="font-weight: bold; color: #d35400; font-size: 15px;">
+        </div>
+        <label style="font-size: 13px; color: #666; font-weight: bold; margin-top: 8px; display: block;">Chọn sản phẩm gốc tương ứng trong kho:</label>
         <input type="text" id="filterProductModalInput" placeholder="Gõ tìm nhanh sản phẩm gốc..." oninput="filterModalProductList()">
-        <div id="modalProductList" style="max-height: 220px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px; background: #fafafa;"></div>
-        <div style="text-align: right; margin-top: 15px;">
-            <button class="btn" onclick="closeTeachModal()" style="background: #95a5a6;">Hủy bỏ</button>
+        <div id="modalProductList" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px; background: #fafafa;"></div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+            <span id="selectedTargetInfo" style="font-size: 13px; color: #2980b9; font-weight: bold;"></span>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn" onclick="closeTeachModal()" style="background: #95a5a6;">Hủy bỏ</button>
+                <button class="btn green" id="saveTeachBtn" onclick="confirmTeachAlias()">💾 Lưu Dấu Hiệu</button>
+            </div>
         </div>
     </div>
 </div>
@@ -134,6 +142,7 @@
     let ghToken = localStorage.getItem('gh_token') || '';
     const ALIAS_FILE_PATH = "aliases.json";
     let html5QrCode = null;
+    let selectedRowForTeach = null;
 
     window.addEventListener('DOMContentLoaded', async () => {
         await loadExcelAndAliases();
@@ -287,7 +296,6 @@
             document.getElementById('userRoleBadge').style.color = "#d35400";
             document.getElementById('loginBtn').style.display = 'none';
             document.getElementById('logoutBtn').style.display = 'inline-block';
-            document.getElementById('saveExcelBtn').style.display = 'inline-block';
             document.getElementById('setupGhDiv').style.display = 'block';
             document.getElementById('ghRepo').value = ghRepo;
             document.getElementById('ghToken').value = ghToken;
@@ -302,7 +310,6 @@
         document.getElementById('userRoleBadge').style.color = "#27ae60";
         document.getElementById('loginBtn').style.display = 'inline-block';
         document.getElementById('logoutBtn').style.display = 'none';
-        document.getElementById('saveExcelBtn').style.display = 'none';
         document.getElementById('setupGhDiv').style.display = 'none';
         renderTable(globalProducts, document.getElementById('searchInput').value);
     });
@@ -317,8 +324,7 @@
     function renderTable(data, keyword) {
         let tbody = document.getElementById('tableBody');
         if (data.length === 0) {
-            // Cho phép cả tài khoản khách bấm "Dạy chuỗi" khi tìm không thấy
-            let teachBtnHtml = keyword ? `<br><br><button class="btn purple" onclick="openTeachModal('${keyword.replace(/'/g, "\\'")}')">🔗 Dạy chuỗi "${keyword}"...</button>` : '';
+            let teachBtnHtml = keyword ? `<br><br><button class="btn purple" onclick="openTeachModalForMissing('${keyword.replace(/'/g, "\\'")}')">🔗 Dạy chuỗi "${keyword}"...</button>` : '';
             tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #888; padding: 20px;">Không tìm thấy sản phẩm.${teachBtnHtml}</td></tr>`;
             return;
         }
@@ -329,35 +335,44 @@
             if (p.aliases.length > 0) {
                 aliasTagsHtml = `<div class="aliases-container"><span>🏷️ Dấu hiệu:</span>`;
                 p.aliases.forEach(a => {
-                    // Dấu X xóa chỉ hiện khi là Admin, khách không thấy nút X để tránh xóa nhầm
                     aliasTagsHtml += `<span class="alias-tag">${a} ${isAdmin ? '<span class="remove-tag" onclick="removeAlias('+p.rowIndex+', \''+a+'\')">&times;</span>' : ''}</span>`;
                 });
                 aliasTagsHtml += `</div>`;
             }
-            // Cho phép CẢ KHÁCH VÀ ADMIN đều thấy nút "+ Dạy thêm" để gán nhãn
             let nameCell = `<div><span>${p.name}</span>` + aliasTagsHtml + `<button class="btn purple small" style="margin-top:6px;" onclick="openTeachModalForProduct(${p.rowIndex})">+ Dạy thêm</button></div>`;
             html += `<tr><td>${index + 1}</td><td>${badgeHtml}</td><td>${nameCell}</td></tr>`;
         });
         tbody.innerHTML = html;
     }
 
-    function openTeachModal(keyword) {
+    // Trường hợp 1: Bấm từ nút tìm kiếm không thấy -> Nhập alias tự do và chọn sản phẩm gốc gán vào
+    function openTeachModalForMissing(keyword) {
+        document.getElementById('modalTitle').innerText = "🔗 Dạy Dấu Hiệu Mới";
+        document.getElementById('teachInputArea').style.display = 'block';
         document.getElementById('editableMissingKeyword').value = keyword;
+        selectedRowForTeach = null;
+        document.getElementById('selectedTargetInfo').innerText = "Vui lòng chọn sản phẩm gốc bên dưới 👇";
         document.getElementById('filterProductModalInput').value = '';
         renderModalProductList('');
         document.getElementById('teachModal').classList.add('open');
     }
 
+    // Trường hợp 2: Bấm thẳng vào nút "+ Dạy thêm" của 1 sản phẩm có sẵn
     function openTeachModalForProduct(rowIndex) {
         let item = globalProducts.find(p => p.rowIndex === rowIndex);
-        document.getElementById('editableMissingKeyword').value = item ? (item.code || item.name.substring(0, 15)) : '';
-        window.targetRowForDirectTeach = rowIndex;
+        if (!item) return;
+        document.getElementById('modalTitle').innerText = `🔗 Thêm Dấu Hiệu Cho: ${item.name}`;
+        document.getElementById('teachInputArea').style.display = 'block';
+        document.getElementById('editableMissingKeyword').value = '';
+        selectedRowForTeach = rowIndex;
+        document.getElementById('selectedTargetInfo').innerText = `👉 Đang gán cho sản phẩm: [${item.code || 'Ko mã'}] ${item.name}`;
+        document.getElementById('filterProductModalInput').value = '';
         renderModalProductList('');
         document.getElementById('teachModal').classList.add('open');
     }
 
     function closeTeachModal() {
-        window.targetRowForDirectTeach = null;
+        selectedRowForTeach = null;
         document.getElementById('teachModal').classList.remove('open');
     }
 
@@ -369,26 +384,42 @@
         let listContainer = document.getElementById('modalProductList');
         listContainer.innerHTML = '';
         let matched = query ? globalProducts.filter(p => p.searchKey.includes(query)) : globalProducts;
-        matched.slice(0, 40).forEach(p => {
+        matched.slice(0, 30).forEach(p => {
             let itemDiv = document.createElement('div');
             itemDiv.className = 'product-select-item';
-            itemDiv.innerHTML = `<span><b>${p.code ? '['+p.code+'] ' : ''}</b> ${p.name}</span> <button class="btn green small">Gán</button>`;
-            itemDiv.onclick = () => assignAliasToProduct(window.targetRowForDirectTeach !== null ? window.targetRowForDirectTeach : p.rowIndex);
+            let isSelected = (selectedRowForTeach === p.rowIndex);
+            itemDiv.style.background = isSelected ? '#e8f4fd' : '';
+            itemDiv.innerHTML = `<span><b>${p.code ? '['+p.code+'] ' : ''}</b> ${p.name}</span> <span style="font-size:12px; color:${isSelected?'#2980b9':'#27ae60'}; font-weight:bold;">${isSelected ? '✓ Đang chọn' : 'Chọn'}</span>`;
+            itemDiv.onclick = () => {
+                selectedRowForTeach = p.rowIndex;
+                document.getElementById('selectedTargetInfo').innerText = `👉 Đang gán cho sản phẩm: [${p.code || 'Ko mã'}] ${p.name}`;
+                renderModalProductList(document.getElementById('filterProductModalInput').value.toLowerCase().trim());
+            };
             listContainer.appendChild(itemDiv);
         });
     }
 
-    function assignAliasToProduct(chosenRowIdx) {
+    function confirmTeachAlias() {
         let keywordToTeach = document.getElementById('editableMissingKeyword').value.trim().toLowerCase();
-        if (!keywordToTeach) return;
-        let item = globalProducts.find(p => p.rowIndex === chosenRowIdx);
-        if (item && !item.aliases.includes(keywordToTeach)) {
-            item.aliases.push(keywordToTeach);
-            item.aliasesRaw = item.aliases.join(', ');
+        if (!keywordToTeach) {
+            alert("Vui lòng nhập dấu hiệu/từ khóa nhận diện!");
+            return;
         }
-        closeTeachModal();
-        renderTable(globalProducts, document.getElementById('searchInput').value);
-        syncAliasesToGitHub();
+        if (selectedRowForTeach === null) {
+            alert("Vui lòng chọn một sản phẩm gốc trong danh sách bên dưới để liên kết!");
+            return;
+        }
+
+        let item = globalProducts.find(p => p.rowIndex === selectedRowForTeach);
+        if (item) {
+            if (!item.aliases.includes(keywordToTeach)) {
+                item.aliases.push(keywordToTeach);
+                item.aliasesRaw = item.aliases.join(', ');
+            }
+            closeTeachModal();
+            renderTable(globalProducts, document.getElementById('searchInput').value);
+            syncAliasesToGitHub();
+        }
     }
 
     function removeAlias(rowIndex, aliasToRemove) {
@@ -398,15 +429,6 @@
         renderTable(globalProducts, document.getElementById('searchInput').value);
         syncAliasesToGitHub();
     }
-
-    document.getElementById('saveExcelBtn').addEventListener('click', function() {
-        let rows = [["Mã sản phẩm", "Tên sản phẩm", "Dấu hiệu nhận diện"]];
-        globalProducts.forEach(p => rows.push([p.code, p.name, p.aliasesRaw || '']));
-        let ws = XLSX.utils.aoa_to_sheet(rows);
-        let wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Kho");
-        XLSX.writeFile(wb, "Danh_sach_ton_kho_tong_hop.xlsx");
-    });
 </script>
 </body>
 </html>
