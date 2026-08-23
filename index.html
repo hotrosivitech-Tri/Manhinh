@@ -249,13 +249,10 @@
             { facingMode: "environment" },
             { fps: 10, qrbox: { width: 250, height: 250 } },
             (decodedText, decodedResult) => {
-                // Khi quét thành công mã QR
                 handleScannedCode(decodedText);
                 closeQrScannerModal();
             },
-            (errorMessage) => {
-                // Bỏ qua lỗi quét liên tục khung hình trống
-            }
+            (errorMessage) => {}
         ).catch(err => {
             alert("Không thể mở camera: " + err);
             closeQrScannerModal();
@@ -273,7 +270,6 @@
         let cleanCode = codeText.trim();
         let searchInput = document.getElementById('searchInput');
         searchInput.value = cleanCode;
-        // Kích hoạt sự kiện tìm kiếm
         let event = new Event('input', { bubbles: true });
         searchInput.dispatchEvent(event);
     }
@@ -321,7 +317,8 @@
     function renderTable(data, keyword) {
         let tbody = document.getElementById('tableBody');
         if (data.length === 0) {
-            let teachBtnHtml = (isAdmin && keyword) ? `<br><br><button class="btn purple" onclick="openTeachModal('${keyword.replace(/'/g, "\\'")}')">🔗 Dạy chuỗi "${keyword}"...</button>` : '';
+            // Cho phép cả tài khoản khách bấm "Dạy chuỗi" khi tìm không thấy
+            let teachBtnHtml = keyword ? `<br><br><button class="btn purple" onclick="openTeachModal('${keyword.replace(/'/g, "\\'")}')">🔗 Dạy chuỗi "${keyword}"...</button>` : '';
             tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #888; padding: 20px;">Không tìm thấy sản phẩm.${teachBtnHtml}</td></tr>`;
             return;
         }
@@ -332,11 +329,13 @@
             if (p.aliases.length > 0) {
                 aliasTagsHtml = `<div class="aliases-container"><span>🏷️ Dấu hiệu:</span>`;
                 p.aliases.forEach(a => {
+                    // Dấu X xóa chỉ hiện khi là Admin, khách không thấy nút X để tránh xóa nhầm
                     aliasTagsHtml += `<span class="alias-tag">${a} ${isAdmin ? '<span class="remove-tag" onclick="removeAlias('+p.rowIndex+', \''+a+'\')">&times;</span>' : ''}</span>`;
                 });
                 aliasTagsHtml += `</div>`;
             }
-            let nameCell = isAdmin ? `<div><span>${p.name}</span>` + aliasTagsHtml + `<button class="btn purple small" style="margin-top:6px;" onclick="openTeachModalForProduct(${p.rowIndex})">+ Dạy thêm</button></div>` : `${p.name} ${aliasTagsHtml}`;
+            // Cho phép CẢ KHÁCH VÀ ADMIN đều thấy nút "+ Dạy thêm" để gán nhãn
+            let nameCell = `<div><span>${p.name}</span>` + aliasTagsHtml + `<button class="btn purple small" style="margin-top:6px;" onclick="openTeachModalForProduct(${p.rowIndex})">+ Dạy thêm</button></div>`;
             html += `<tr><td>${index + 1}</td><td>${badgeHtml}</td><td>${nameCell}</td></tr>`;
         });
         tbody.innerHTML = html;
