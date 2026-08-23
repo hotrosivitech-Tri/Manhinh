@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tra Cứu Kho Linh Kiện - Thông Minh AI (% Tương Đồng)</title>
+    <title>Tra Cứu Kho Linh Kiện & Quét QR Code</title>
+    <!-- Thư viện đọc Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- Thư viện quét QR/Barcode siêu tốc -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 15px; color: #333; }
         .container { max-width: 1050px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -13,11 +15,11 @@
         .top-bar { display: flex; justify-content: space-between; align-items: center; background: #e8f4fd; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
         .search-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
         .search-box { flex: 1; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; }
-        .btn { background: #2980b9; color: white; border: none; padding: 10px 16px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        .btn { background: #2980b9; color: white; border: none; padding: 10px 16px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
         .btn.green { background: #27ae60; }
         .btn.red { background: #c0392b; }
-        .btn.orange { background: #d35400; }
         .btn.purple { background: #8e44ad; }
+        .btn.orange { background: #d35400; }
         .btn.small { padding: 4px 8px; font-size: 12px; }
         .btn:disabled { background: #bdc3c7; cursor: not-allowed; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -29,24 +31,22 @@
         .alias-tag .remove-tag { margin-left: 6px; cursor: pointer; color: #c0392b; font-weight: bold; font-size: 14px; }
         .aliases-container { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
         .stats { font-size: 13px; color: #666; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        .smart-suggestion-box { background: #fff9e6; border: 1px dashed #f39c12; padding: 12px; border-radius: 6px; margin-bottom: 15px; display: none; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; padding: 15px; z-index: 1000; }
         .modal.open { display: flex; }
         .modalbox { background: white; border-radius: 12px; max-width: 600px; width: 100%; padding: 20px; text-align: left; }
-        video { width: 100%; max-height: 35vh; background: #000; border-radius: 8px; object-fit: cover; }
-        .ocr-status { margin: 10px 0; font-weight: bold; color: #e67e22; min-height: 24px; text-align: center; }
         input[type="text"], input[type="password"] { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         .product-select-item { padding: 8px 12px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .product-select-item:hover { background: #e8f4fd; }
+        #qr-reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 8px; overflow: hidden; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📦 Tra Cứu Kho Linh Kiện (Gợi Ý Tỷ Lệ % Trùng Khớp)</h2>
+    <h2>📦 Tra Cứu Kho Linh Kiện & Quét QR Code</h2>
 
     <div class="top-bar">
-        <div>Trạng thái: <span id="userRoleBadge" style="font-weight: bold; color: #27ae60;">👤 Khách (Tra cứu & quét)</span></div>
+        <div>Trạng thái: <span id="userRoleBadge" style="font-weight: bold; color: #27ae60;">👤 Khách (Tra cứu)</span></div>
         <div>
             <button class="btn" id="loginBtn">🔑 Đăng Nhập Quản Trị</button>
             <button class="btn red" id="logoutBtn" style="display:none;">Đăng Xuất</button>
@@ -62,20 +62,14 @@
         </div>
     </div>
 
-    <!-- Khung gợi ý thông minh kèm % -->
-    <div id="smartSuggestionBox" class="smart-suggestion-box">
-        <b style="color: #d35400;">💡 Gợi ý chuyển đổi mã thông minh:</b>
-        <div id="smartSuggestionContent" style="margin-top: 6px; font-size: 14px;"></div>
-    </div>
-
     <div class="search-row">
-        <input type="text" id="searchInput" class="search-box" placeholder="Gõ tìm kiếm sản phẩm, mã mờ, OCR hoặc quét camera..." disabled />
-        <button class="btn green" id="openCamBtn" disabled>📷 Quét OCR Camera</button>
-        <button class="btn orange" id="saveExcelBtn" style="display:none;">💾 Tải Về Excel</button>
+        <button class="btn orange" onclick="openQrScannerModal()">📷 Quét QR Code</button>
+        <input type="text" id="searchInput" class="search-box" placeholder="Gõ tìm kiếm mã cáp, tên sản phẩm hoặc bấm Quét QR..." disabled />
+        <button class="btn green" id="saveExcelBtn" style="display:none;">💾 Tải Về Excel</button>
     </div>
     
     <div class="stats">
-        <span id="statsInfo">Đang quét tìm file Excel trên kho...</span>
+        <span id="statsInfo">Đang tải dữ liệu từ kho...</span>
         <div><span id="syncStatus" style="font-weight: bold; color: #27ae60;"></span></div>
     </div>
 
@@ -93,7 +87,19 @@
     </table>
 </div>
 
-<!-- Modal Gán Dấu Hiệu -->
+<!-- Modal Quét QR Code -->
+<div class="modal" id="qrModal">
+    <div class="modalbox" style="text-align: center;">
+        <h3 style="margin-top:0; color: #2980b9;">📷 Quét Mã QR / Barcode Linh Kiện</h3>
+        <div id="qr-reader"></div>
+        <p style="font-size: 13px; color: #666; margin-top: 10px;">Đưa mã QR trước camera điện thoại để hệ thống nhận diện tức thì.</p>
+        <div style="margin-top: 15px;">
+            <button class="btn red" onclick="closeQrScannerModal()">Đóng Camera</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Dán Nhãn / Dạy Dấu Hiệu -->
 <div class="modal" id="teachModal">
     <div class="modalbox">
         <h3 style="margin-top:0; color: #c0392b;">🔗 Dạy Dấu Hiệu Mới</h3>
@@ -119,51 +125,19 @@
     </div>
 </div>
 
-<!-- Modal Camera -->
-<div class="modal" id="camModal">
-    <div class="modalbox" style="text-align: center;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <b>Quét OCR Nhãn Mác Linh Kiện Mờ</b>
-            <button class="btn" id="closeCamBtn" style="padding: 4px 8px; background: #c0392b;">Đóng</button>
-        </div>
-        <video id="videoFeed" autoplay playsinline muted></video>
-        <canvas id="canvasSnap" style="display: none;"></canvas>
-        <div class="ocr-status" id="ocrStatus">Đang xin quyền camera...</div>
-        <button class="btn green" id="captureBtn" style="width: 100%; padding: 12px; margin-top: 5px;">📸 Chụp & Đọc Dấu Hiệu Ngay</button>
-    </div>
-</div>
-
 <script>
     let globalProducts = [];
     let isAdmin = false;
-    let mediaStream = null;
     const ADMIN_USERNAME = "admin";
     const ADMIN_PASSWORD = "Khongnho@1";
     let ghRepo = localStorage.getItem('gh_repo') || 'hotrosivitech-Tri/Manhinh';
     let ghToken = localStorage.getItem('gh_token') || '';
     const ALIAS_FILE_PATH = "aliases.json";
+    let html5QrCode = null;
 
     window.addEventListener('DOMContentLoaded', async () => {
         await loadExcelAndAliases();
     });
-
-    function getTokens(str) {
-        if (!str) return [];
-        return str.toLowerCase()
-            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9]/g, " ")
-            .split(/\s+/)
-            .filter(t => t.length > 1);
-    }
-
-    function calculateSimilarity(str1, str2) {
-        let set1 = new Set(getTokens(str1));
-        let set2 = new Set(getTokens(str2));
-        if (set1.size === 0 || set2.size === 0) return 0;
-        let intersection = [...set1].filter(x => set2.has(x));
-        let union = new Set([...set1, ...set2]);
-        return intersection.length / union.size;
-    }
 
     async function loadExcelAndAliases() {
         document.getElementById('statsInfo').innerText = "Đang tìm file Excel trên kho GitHub...";
@@ -196,8 +170,7 @@
             parseExcelData(excelRows, savedAliases);
 
             document.getElementById('searchInput').disabled = false;
-            document.getElementById('openCamBtn').disabled = false;
-            document.getElementById('statsInfo').innerText = `Đã tải thành công ${globalProducts.length} sản phẩm từ file Excel gốc!`;
+            document.getElementById('statsInfo').innerText = `Đã tải thành công ${globalProducts.length} sản phẩm từ file Excel!`;
 
         } catch (err) {
             document.getElementById('statsInfo').innerText = "Lỗi tải dữ liệu: " + err.message;
@@ -206,9 +179,6 @@
 
     function parseExcelData(rows, savedAliases) {
         globalProducts = [];
-        let existingKeys = Object.keys(savedAliases);
-        let suggestions = [];
-
         for (let i = 1; i < rows.length; i++) {
             let r = rows[i];
             if (!r || r.length === 0) continue;
@@ -219,25 +189,6 @@
             let uniqueKey = code || name;
             let aliases = savedAliases[uniqueKey] || [];
 
-            // Tìm kiếm các mã cũ có khả năng tương thích cao với mã mới xuất hiện trên Excel
-            if (aliases.length === 0 && existingKeys.length > 0) {
-                for (let oldKey of existingKeys) {
-                    if (savedAliases[oldKey] && savedAliases[oldKey].length > 0) {
-                        let sim = calculateSimilarity(uniqueKey, oldKey);
-                        if (sim >= 0.40) { // Đặt ngưỡng từ 40% trở lên là đưa vào tầm ngắm
-                            suggestions.push({
-                                oldKey: oldKey,
-                                newKey: uniqueKey,
-                                newName: name,
-                                aliases: savedAliases[oldKey],
-                                score: sim,
-                                percent: Math.round(sim * 100)
-                            });
-                        }
-                    }
-                }
-            }
-
             globalProducts.push({
                 rowIndex: globalProducts.length,
                 code: code,
@@ -247,78 +198,7 @@
                 aliasesRaw: aliases.join(', ')
             });
         }
-
-        // Lọc và sắp xếp các gợi ý có điểm % cao nhất lên đầu
-        if (suggestions.length > 0) {
-            suggestions.sort((a, b) => b.score - a.score);
-            // Lấy ra các cặp gợi ý tốt nhất (mỗi oldKey chỉ lấy gợi ý tốt nhất)
-            let bestMap = new Map();
-            suggestions.forEach(s => {
-                if (!bestMap.has(s.oldKey)) bestMap.set(s.oldKey, s);
-            });
-            showSmartSuggestions(Array.from(bestMap.values()));
-        }
-
         renderTable(globalProducts, document.getElementById('searchInput').value);
-    }
-
-    function showSmartSuggestions(suggestionList) {
-        let box = document.getElementById('smartSuggestionBox');
-        let content = document.getElementById('smartSuggestionContent');
-        let html = "";
-
-        suggestionList.forEach(s => {
-            html += `<div style="margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #fce8b2;">
-                Mã cũ: <b>"${s.oldKey}"</b> 👉 Chuyển sang mã mới: <b>"${s.newKey}"</b> (${s.newName}) — Độ trùng khớp: <span style="color: #c0392b; font-weight: bold;">${s.percent}%</span><br>
-                <span style="font-size: 12px; color: #666;">Dấu hiệu đang có: [<i>${s.aliases.join(', ')}</i>]</span><br>
-                <button class="btn green small" style="margin-top: 4px;" onclick="applySmartMerge('${s.oldKey.replace(/'/g, "\\'")}', '${s.newKey.replace(/'/g, "\\'")}')">⚡ Xác nhận gộp sang mã mới (${s.percent}%)</button>
-            </div>`;
-        });
-        
-        content.innerHTML = html;
-        box.style.display = 'block';
-    }
-
-    async function applySmartMerge(oldKey, newKey) {
-        try {
-            let aliasRes = await fetch(ALIAS_FILE_PATH + "?t=" + new Date().getTime());
-            if (aliasRes.ok) {
-                let savedAliases = await aliasRes.json();
-                if (savedAliases[oldKey]) {
-                    if (!savedAliases[newKey]) savedAliases[newKey] = [];
-                    savedAliases[newKey] = [...new Set([...savedAliases[newKey], ...savedAliases[oldKey]])];
-                    delete savedAliases[oldKey];
-
-                    let targetP = globalProducts.find(p => (p.code || p.name) === newKey);
-                    if (targetP) {
-                        targetP.aliases = savedAliases[newKey];
-                        targetP.aliasesRaw = targetP.aliases.join(', ');
-                    }
-
-                    await saveAliasesDirectPayload(savedAliases);
-                    document.getElementById('smartSuggestionBox').style.display = 'none';
-                    renderTable(globalProducts, document.getElementById('searchInput').value);
-                    alert("Đã tự động chuyển dấu hiệu sang mã mới thành công!");
-                }
-            }
-        } catch (err) {
-            alert("Lỗi khi gộp tự động: " + err.message);
-        }
-    }
-
-    async function saveAliasesDirectPayload(aliasPayload) {
-        if (!ghRepo || !ghToken) return;
-        let contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(aliasPayload, null, 2))));
-        let apiUrl = `https://api.github.com/repos/${ghRepo}/contents/${ALIAS_FILE_PATH}`;
-        let getRes = await fetch(apiUrl, { headers: { "Authorization": `token ${ghToken}` } });
-        let sha = getRes.ok ? (await getRes.json()).sha : "";
-        let putBody = { message: "Smart merge aliases with percentage", content: contentEncoded };
-        if (sha) putBody.sha = sha;
-        await fetch(apiUrl, {
-            method: "PUT",
-            headers: { "Authorization": `token ${ghToken}`, "Content-Type": "application/json" },
-            body: JSON.stringify(putBody)
-        });
     }
 
     async function syncAliasesToGitHub() {
@@ -329,8 +209,23 @@
             let key = p.code || p.name;
             if (p.aliases.length > 0) aliasPayload[key] = p.aliases;
         });
-        await saveAliasesDirectPayload(aliasPayload);
-        document.getElementById('syncStatus').innerText = "✅ Đã lưu từ khóa!";
+
+        let contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(aliasPayload, null, 2))));
+        let apiUrl = `https://api.github.com/repos/${ghRepo}/contents/${ALIAS_FILE_PATH}`;
+        try {
+            let getRes = await fetch(apiUrl, { headers: { "Authorization": `token ${ghToken}` } });
+            let sha = getRes.ok ? (await getRes.json()).sha : "";
+            let putBody = { message: "Update aliases", content: contentEncoded };
+            if (sha) putBody.sha = sha;
+            await fetch(apiUrl, {
+                method: "PUT",
+                headers: { "Authorization": `token ${ghToken}`, "Content-Type": "application/json" },
+                body: JSON.stringify(putBody)
+            });
+            document.getElementById('syncStatus').innerText = "✅ Đã lưu từ khóa!";
+        } catch(e) {
+            document.getElementById('syncStatus').innerText = "❌ Lỗi lưu từ khóa";
+        }
         setTimeout(() => { document.getElementById('syncStatus').innerText = ""; }, 2500);
     }
 
@@ -342,6 +237,45 @@
         alert("Đã lưu cấu hình!");
         document.getElementById('setupGhDiv').style.display = 'none';
         loadExcelAndAliases();
+    }
+
+    // --- Quét QR Code ---
+    function openQrScannerModal() {
+        document.getElementById('qrModal').classList.add('open');
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("qr-reader");
+        }
+        html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            (decodedText, decodedResult) => {
+                // Khi quét thành công mã QR
+                handleScannedCode(decodedText);
+                closeQrScannerModal();
+            },
+            (errorMessage) => {
+                // Bỏ qua lỗi quét liên tục khung hình trống
+            }
+        ).catch(err => {
+            alert("Không thể mở camera: " + err);
+            closeQrScannerModal();
+        });
+    }
+
+    function closeQrScannerModal() {
+        document.getElementById('qrModal').classList.remove('open');
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().catch(err => console.log(err));
+        }
+    }
+
+    function handleScannedCode(codeText) {
+        let cleanCode = codeText.trim();
+        let searchInput = document.getElementById('searchInput');
+        searchInput.value = cleanCode;
+        // Kích hoạt sự kiện tìm kiếm
+        let event = new Event('input', { bubbles: true });
+        searchInput.dispatchEvent(event);
     }
 
     document.getElementById('loginBtn').addEventListener('click', () => {
@@ -473,45 +407,6 @@
         let wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Kho");
         XLSX.writeFile(wb, "Danh_sach_ton_kho_tong_hop.xlsx");
-    });
-
-    // Camera OCR
-    document.getElementById('openCamBtn').addEventListener('click', async function() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert("Trình duyệt chặn camera!"); return; }
-        document.getElementById('camModal').classList.add('open');
-        document.getElementById('ocrStatus').innerText = "Đang mở camera...";
-        try {
-            mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-            document.getElementById('videoFeed').srcObject = mediaStream;
-            document.getElementById('ocrStatus').innerText = "Hướng vào nhãn mác và bấm chụp!";
-        } catch (err) { document.getElementById('ocrStatus').innerText = "Lỗi camera: " + err.message; }
-    });
-
-    document.getElementById('closeCamBtn').addEventListener('click', closeCamera);
-    function closeCamera() {
-        if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
-        document.getElementById('camModal').classList.remove('open');
-    }
-
-    document.getElementById('captureBtn').addEventListener('click', async function() {
-        let video = document.getElementById('videoFeed');
-        if (!video.videoWidth) return;
-        let canvas = document.getElementById('canvasSnap');
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        document.getElementById('ocrStatus').innerText = "Đang đọc ký tự (OCR)...";
-        try {
-            let result = await Tesseract.recognize(canvas, 'eng');
-            let text = result.data.text.replace(/[^a-zA-Z0-9]/g, ' ').trim();
-            document.getElementById('ocrStatus').innerText = `Kết quả: "${text}"`;
-            if (text) {
-                document.getElementById('searchInput').value = text;
-                let keyword = text.toLowerCase();
-                let filtered = globalProducts.filter(p => p.searchKey.includes(keyword) || p.aliases.some(a => a.includes(keyword)));
-                renderTable(filtered, keyword);
-                setTimeout(closeCamera, 800);
-            } else { document.getElementById('ocrStatus').innerText = "Không đọc rõ chữ, thử lại!"; }
-        } catch (err) { document.getElementById('ocrStatus').innerText = "Lỗi OCR: " + err.message; }
     });
 </script>
 </body>
