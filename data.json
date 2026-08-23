@@ -2,11 +2,21 @@
   {
     "code": "M01",
     "name": "Sản phẩm mẫu ví dụ 1",
-    "aliases": ["dau_hieu_1", "ma_mo_1"]
+    "aliases": [
+      "dau_hieu_1",
+      "ma_mo_1",
+      "batri",
+      "di cho khac choi di"
+    ]
   },
   {
     "code": "M02",
     "name": "Sản phẩm mẫu ví dụ 2",
-    "aliases": ["dau_hieu_2"]
+    "aliases": [
+      "dau_hieu_2",
+      "di cho khac choi",
+      "m02",
+      "ra ngoai"
+    ]
   }
 ]
